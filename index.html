@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dyslexia Detection Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f0faff;
+      color: #083a5e;
+      overflow-x: hidden;
+      position: relative;
+      min-height: 100vh;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      background: #f0faff;
+      position: relative;
+      z-index: 20;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      font-weight: 700;
+      font-size: 24px;
+      user-select: none;
+    }
+
+    nav {
+      overflow: visible;
+      max-height: none;
+      transition: none;
+    }
+
+    nav .nav-links {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap-reverse;
+    }
+
+    nav .nav-links a {
+      margin-left: 25px;
+      text-decoration: none;
+      color: #083a5e;
+      font-weight: 500;
+      user-select: none;
+      transition:
+        transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1),
+        box-shadow 0.25s ease,
+        background-color 0.3s ease,
+        color 0.3s ease;
+      transform-origin: center bottom;
+      will-change: transform;
+      cursor: pointer;
+    }
+
+    nav .nav-links a:hover,
+    nav .nav-links a:focus {
+      transform: scale(1.15);
+      box-shadow: 0 6px 12px rgba(0, 194, 211, 0.3);
+      outline: none;
+      border-radius: 8px;
+      background-color: #b3e5fc;
+      color: #045a8d;
+    }
+
+    nav .nav-links a.button {
+      border: 2px solid #083a5e;
+      padding: 8px 16px;
+      border-radius: 30px;
+      transition:
+        background-color 0.25s ease,
+        color 0.25s ease,
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
+    }
+
+    nav .nav-links a.button:hover,
+    nav .nav-links a.button:focus {
+      background-color: #00a7c7;
+      color: white;
+      transform: scale(1.15);
+      box-shadow: 0 6px 14px rgba(0, 194, 211, 0.5);
+      outline: none;
+    }
+
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: space-around;
+      width: 28px;
+      height: 22px;
+      cursor: pointer;
+      user-select: none;
+      z-index: 30;
+    }
+
+    .hamburger div {
+      width: 28px;
+      height: 3px;
+      background-color: #083a5e;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 60px 20px;
+      text-align: center;
+      background: #ffffff;
+      box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.05);
+      border-radius: 12px;
+      position: relative;
+      z-index: 20;
+    }
+
+    #animated-heading {
+      font-family: 'Roboto', sans-serif !important;
+      font-weight: 700;
+      font-size: 32px;
+      margin-top: 40px;
+      min-height: 48px;
+      position: relative;
+      transition: opacity 0.8s ease;
+      z-index: 20;
+    }
+
+    .cta-button {
+      background: #00c2d3;
+      color: white;
+      padding: 14px 30px;
+      font-size: 16px;
+      border: none;
+      border-radius: 30px;
+      margin-top: 30px;
+      cursor: pointer;
+      font-weight: 600;
+      z-index: 20;
+      position: relative;
+    }
+
+    .price {
+      margin-top: 10px;
+      color: #777;
+      font-size: 14px;
+      z-index: 20;
+      position: relative;
+    }
+
+    .image-box {
+      width: 320px;
+      height: 240px;
+      margin: 40px auto;
+      box-shadow: 0px 6px 18px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+      background: #fff;
+      z-index: 20;
+    }
+
+    .scrolling-images {
+      display: flex;
+      width: calc(320px * 5);
+      animation: scrollLeft 25s linear infinite;
+    }
+
+    .scrolling-images img {
+      width: 320px;
+      height: 240px;
+      object-fit: cover;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    @keyframes scrollLeft {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-1280px); }
+    }
+
+    .learn-how {
+      font-weight: 600;
+      color: #007aa3;
+      text-decoration: underline;
+      margin-top: 10px;
+      z-index: 20;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .description {
+      margin-top: 20px;
+      color: #444;
+      font-size: 16px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      z-index: 20;
+      position: relative;
+    }
+
+    .floating-letters-container {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 5;
+      overflow: visible;
+    }
+
+    .floating-letter {
+      position: absolute;
+      font-size: 44px;
+      font-weight: 700;
+      color: rgba(8, 58, 94, 0.15);
+      user-select: none;
+      pointer-events: none;
+      text-shadow:
+        0 0 4px rgba(0, 194, 211, 0.3),
+        0 0 8px rgba(0, 194, 211, 0.2);
+      filter: drop-shadow(0 0 1px rgba(0, 194, 211, 0.2));
+      will-change: transform;
+      transition: transform 0.1s linear;
+    }
+
+    /* Sections */
+    #features-section, #how-it-works-section, #blog-section, #faq-section {
+      display: none;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 40px 20px;
+      background: #fff;
+      box-shadow: 0px 4px 15px rgba(0,0,0,0.05);
+      border-radius: 12px;
+      color: #083a5e;
+      text-align: left;
+      position: relative;
+      z-index: 20;
+    }
+
+    #features-section h2, #how-it-works-section h2, #blog-section h2, #faq-section h2 {
+      font-family: 'Roboto', sans-serif;
+      font-weight: 700;
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+
+    #features-section p, #features-section ul,
+    #how-it-works-section p, #how-it-works-section ol,
+    #blog-section p, #blog-section ul,
+    #faq-section p, #faq-section ul {
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    #features-section ul, #how-it-works-section ol, #blog-section ul, #faq-section ul {
+      padding-left: 20px;
+      margin-top: 10px;
+    }
+
+    button.close-section {
+      margin-top: 30px;
+      background:#00c2d3;
+      color:#fff;
+      border:none;
+      padding:12px 28px;
+      border-radius:30px;
+      font-weight:600;
+      cursor:pointer;
+      display: inline-block;
+    }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 15px 20px;
+      }
+      .hamburger {
+        display: flex;
+      }
+      nav {
+        overflow: hidden;
+        max-height: 0;
+        transition: max-height 0.35s ease;
+        width: 100%;
+      }
+      nav.collapsed {
+        max-height: 100vh;
+      }
+      nav .nav-links {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-top: 10px;
+      }
+      nav .nav-links a {
+        margin: 10px 0 0 0;
+        transition: none;
+      }
+      nav .nav-links a.button {
+        margin: 15px 0 0 0;
+        border-radius: 30px;
+        padding: 10px 20px;
+        width: 90%;
+        max-width: 200px;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+     <div class="logo">
+     <img src="https://tse3.mm.bing.net/th/id/OIP.3qBrCPRQYaT7oa86XhgQFAAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3" 
+         alt="Bot Icon" 
+         style="width: 40px; height: 40px; vertical-align: middle; margin-right: 8px; border-radius: 50%;">
+    Cognera
+   </div>
+    <div class="hamburger" id="hamburger" aria-label="Toggle navigation" aria-expanded="false" role="button" tabindex="0">
+      <div></div>
+      <div></div>
+      <div></div>
+    </div>
+
+    <nav id="nav-menu" class="collapsed">
+      <div class="nav-links">
+        <a href="#" id="features-link">Features</a>
+        <a href="#" id="how-it-works-link">How it Works</a>
+        <a href="#" id="blog-link">Blog</a>
+        <a href="#" id="faq-link">FAQ</a>
+        <a href="index1.html" class="button">START TEST</a>
+      </div>
+    </nav>
+  </header>
+
+  <div class="container" id="main-container">
+    <h1 id="animated-heading">AI-Powered Dyslexia Detection Tool</h1>
+
+    <button class="cta-button">Start Free Analysis</button>
+    <div class="price">Instant results using handwriting, voice, and reading</div>
+
+    <div class="image-box" aria-label="Scrolling images showing dyslexia-related scenes">
+      <div class="scrolling-images" aria-role="list">
+        <img src="https://www.shutterstock.com/image-vector/child-suffering-dyslexia-having-difficulty-600nw-2037408560.jpg" alt="Confused child" role="listitem" />
+        <img src="https://media.istockphoto.com/id/697893194/photo/confused-boy-thinking-with-question-mark.jpg?s=612x612&w=0&k=20&c=f8qsF0T81c5gps4Qv_xtU5mbhE3DkJmXHu2wRzGlaEo=" alt="Child reading a book" role="listitem" />
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-uckaG2rNR0QMpzsBtBNXOYZYZEwB2wDfgg&s" alt="Children learning in classroom" role="listitem" />
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ5ZaDcrFowVU7wgyV4jSucPipaGDwqlKp4yDJK20CcQbg8UrVJToB5jgFGMgezJx3h9aU&usqp=CAU" alt="Hand writing practice" role="listitem" />
+        <img src="https://www.shutterstock.com/image-vector/child-suffering-dyslexia-having-difficulty-600nw-2037408560.jpg" alt="" role="presentation" />
+      </div>
+    </div>
+
+    <div class="learn-how" id="learn-how-link">Learn How</div>
+
+    <p class="description">
+      Early detection of dyslexia can change a child's future. Our tool uses AI to analyze your child's writing, reading, and speaking patterns and helps identify signs of dyslexia.
+    </p>
+  </div>
+
+  <!-- Features Section -->
+  <section id="features-section" aria-live="polite" aria-label="Detailed Features Section">
+    <h2>Features</h2>
+    <p>Our AI-Powered Dyslexia Detection Tool offers the following key features:</p>
+    <ul>
+      <li><strong>Handwriting Analysis:</strong> Detects dyslexia signs by analyzing handwriting samples using advanced AI.</li>
+      <li><strong>Voice and Speech Analysis:</strong> Assesses reading and speaking patterns to identify difficulties.</li>
+      <li><strong>Reading Pattern Recognition:</strong> Monitors eye movement and reading speed for early signs.</li>
+      <li><strong>Instant Results:</strong> Get quick, reliable feedback with personalized recommendations.</li>
+      <li><strong>User-Friendly Interface:</strong> Easy to use for parents, teachers, and professionals.</li>
+      <li><strong>Data Privacy:</strong> We ensure all user data is encrypted and never shared.</li>
+    </ul>
+    <button class="close-section" id="close-features">Close</button>
+  </section>
+
+  <!-- How It Works Section -->
+  <section id="how-it-works-section" aria-live="polite" aria-label="How It Works Section">
+    <h2>How It Works</h2>
+    <p>Our dyslexia detection tool operates in three simple steps:</p>
+    <ol>
+      <li><strong>Input Collection:</strong> Users provide handwriting samples, voice recordings, and reading exercises.</li>
+      <li><strong>AI Analysis:</strong> Advanced AI algorithms analyze the inputs to detect patterns indicative of dyslexia.</li>
+      <li><strong>Results & Guidance:</strong> The system delivers instant results with personalized recommendations to support learning.</li>
+    </ol>
+    <button class="close-section" id="close-how-it-works">Close</button>
+  </section>
+
+  <!-- Blog Section -->
+  <section id="blog-section" aria-live="polite" aria-label="Blog Section">
+    <h2>Blog</h2>
+    <p>Welcome to our blog where we share insights and stories about dyslexia awareness, AI in education, and learning strategies.</p>
+    <ul>
+      <li><strong>Understanding Dyslexia:</strong> An overview of dyslexia, signs, and support methods.</li>
+      <li><strong>AI Transforming Education:</strong> How AI tools help in early detection and personalized learning.</li>
+      <li><strong>Success Stories:</strong> Real-life examples of children thriving with early intervention.</li>
+    </ul>
+    <button class="close-section" id="close-blog">Close</button>
+  </section>
+
+  <!-- FAQ Section -->
+  <section id="faq-section" aria-live="polite" aria-label="FAQ Section">
+    <h2>FAQ</h2>
+    <p>Frequently Asked Questions:</p>
+    <ul>
+      <li><strong>What age is best for dyslexia screening?</strong> Screening is effective as early as kindergarten age.</li>
+      <li><strong>Is the analysis confidential?</strong> Yes, all data is encrypted and private.</li>
+      <li><strong>Can this tool replace a professional diagnosis?</strong> No, it is a supportive tool; professional evaluation is recommended.</li>
+      <li><strong>How accurate is the AI analysis?</strong> Our AI is trained on extensive data but is designed for early detection support.</li>
+    </ul>
+    <button class="close-section" id="close-faq">Close</button>
+  </section>
+
+  <!-- Floating letters container -->
+  <div class="floating-letters-container" aria-hidden="true" id="floating-letters-container"></div>
+
+  <script>
+    // Navbar toggle
+    const hamburger = document.getElementById('hamburger');
+    const navMenu = document.getElementById('nav-menu');
+
+    function toggleMenu() {
+      const isCollapsed = navMenu.classList.contains('collapsed');
+      if (isCollapsed) {
+        navMenu.classList.remove('collapsed');
+        hamburger.setAttribute('aria-expanded', 'true');
+      } else {
+        navMenu.classList.add('collapsed');
+        hamburger.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    hamburger.addEventListener('click', toggleMenu);
+    hamburger.addEventListener('keypress', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleMenu();
+      }
+    });
+
+    // Sections and links
+    const mainContainer = document.getElementById('main-container');
+
+    const featuresLink = document.getElementById('features-link');
+    const featuresSection = document.getElementById('features-section');
+    const closeFeaturesBtn = document.getElementById('close-features');
+
+    const howItWorksLink = document.getElementById('how-it-works-link');
+    const howItWorksSection = document.getElementById('how-it-works-section');
+    const closeHowItWorksBtn = document.getElementById('close-how-it-works');
+
+    const blogLink = document.getElementById('blog-link');
+    const blogSection = document.getElementById('blog-section');
+    const closeBlogBtn = document.getElementById('close-blog');
+
+    const faqLink = document.getElementById('faq-link');
+    const faqSection = document.getElementById('faq-section');
+    const closeFaqBtn = document.getElementById('close-faq');
+
+    // Learn How link
+    const learnHowLink = document.getElementById('learn-how-link');
+
+    function hideAllSections() {
+      mainContainer.style.display = 'none';
+      featuresSection.style.display = 'none';
+      howItWorksSection.style.display = 'none';
+      blogSection.style.display = 'none';
+      faqSection.style.display = 'none';
+    }
+
+    function showMain() {
+      mainContainer.style.display = 'block';
+    }
+
+    // Features click
+    featuresLink.addEventListener('click', e => {
+      e.preventDefault();
+      hideAllSections();
+      featuresSection.style.display = 'block';
+      navMenu.classList.add('collapsed');
+      hamburger.setAttribute('aria-expanded', 'false');
+    });
+    closeFeaturesBtn.addEventListener('click', () => {
+      featuresSection.style.display = 'none';
+      showMain();
+    });
+
+    // How it works click
+    howItWorksLink.addEventListener('click', e => {
+      e.preventDefault();
+      hideAllSections();
+      howItWorksSection.style.display = 'block';
+      navMenu.classList.add('collapsed');
+      hamburger.setAttribute('aria-expanded', 'false');
+    });
+    closeHowItWorksBtn.addEventListener('click', () => {
+      howItWorksSection.style.display = 'none';
+      showMain();
+    });
+
+    // Blog click
+    blogLink.addEventListener('click', e => {
+      e.preventDefault();
+      hideAllSections();
+      blogSection.style.display = 'block';
+      navMenu.classList.add('collapsed');
+      hamburger.setAttribute('aria-expanded', 'false');
+    });
+    closeBlogBtn.addEventListener('click', () => {
+      blogSection.style.display = 'none';
+      showMain();
+    });
+
+    // FAQ click
+    faqLink.addEventListener('click', e => {
+      e.preventDefault();
+      hideAllSections();
+      faqSection.style.display = 'block';
+      navMenu.classList.add('collapsed');
+      hamburger.setAttribute('aria-expanded', 'false');
+    });
+    closeFaqBtn.addEventListener('click', () => {
+      faqSection.style.display = 'none';
+      showMain();
+    });
+
+    // Learn How click to open How It Works
+    learnHowLink.addEventListener('click', e => {
+      e.preventDefault();
+      hideAllSections();
+      howItWorksSection.style.display = 'block';
+      navMenu.classList.add('collapsed');
+      hamburger.setAttribute('aria-expanded', 'false');
+    });
+
+    // Heading phrase changer
+    const phrases = [
+      "AI-Powered Dyslexia Detection Tool",
+      "Analyze Handwriting, Voice & Reading",
+      "Early Detection to Change Futures",
+      "Helping Children Learn Better",
+      "Your Partner in Dyslexia Awareness"
+    ];
+
+    const heading = document.getElementById("animated-heading");
+    let index = 0;
+
+    function changePhrase() {
+      heading.style.opacity = 0;
+      setTimeout(() => {
+        index = (index + 1) % phrases.length;
+        heading.textContent = phrases[index];
+        heading.style.opacity = 1;
+      }, 800);
+    }
+
+    setInterval(changePhrase, 4000);
+
+    // Floating letters animation
+    const floatingLettersContainer = document.getElementById('floating-letters-container');
+    const letters = ['a','b','x','d','e','q','m','z','r','t','s','l','o','p','f','g','h','A','B','H','HeLLo','DysLXiA','Z','Pat','CaT','rAT','Q'];
+
+    function createFloatingLetter() {
+      const letter = document.createElement('div');
+      letter.classList.add('floating-letter');
+      letter.textContent = letters[Math.floor(Math.random() * letters.length)];
+
+      letter.style.left = (Math.random() * window.innerWidth) + 'px';
+      letter.style.top = window.innerHeight + 40 + 'px';
+      letter.style.fontSize = (24 + Math.random() * 24) + 'px';
+      letter.style.color = `rgba(8,58,94,${0.1 + Math.random() * 0.1})`;
+
+      floatingLettersContainer.appendChild(letter);
+
+      let posY = window.innerHeight + 40;
+      const speed = 1.0 + Math.random() * 0.5;
+
+      function floatUp() {
+        posY -= speed;
+        letter.style.top = posY + 'px';
+
+        if(posY < -50){
+          floatingLettersContainer.removeChild(letter);
+          clearInterval(interval);
+        }
+      }
+      const interval = setInterval(floatUp, 30);
+    }
+
+    setInterval(createFloatingLetter, 300);
+  </script>
+
+  <script>
+  window.watsonAssistantChatOptions = {
+    integrationID: "78b0d1b2-6e5c-4388-98a1-3e5362e3ac11",
+    region: "au-syd",
+    serviceInstanceID: "9cde6e5e-9544-4bb3-a326-2e2f9102379a",
+    onLoad: async (instance) => { await instance.render(); }
+  };
+  setTimeout(function(){
+    const t=document.createElement('script');
+    t.src="https://web-chat.global.assistant.watson.appdomain.cloud/versions/" + 
+          (window.watsonAssistantChatOptions.clientVersion || 'latest') + "/WatsonAssistantChatEntry.js";
+    document.head.appendChild(t);
+  });
+</script>
+
+</body>
+</html>

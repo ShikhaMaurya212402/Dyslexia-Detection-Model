@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dyslexia Screening Quiz — Fixed</title>
+<style>
+  :root{
+    --bg1:#e6f9ff; --bg2:#d2ecff; --card:#ffffff; --accent:#1e88e5; --muted:#577489;
+    --success:#20c997; --warning:#ffb020; --danger:#ff5252;
+  }
+  html,body{height:100%; margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+  body{
+    background: radial-gradient(1000px 600px at 10% -10%, rgba(30,136,229,0.06), transparent),
+                radial-gradient(900px 500px at 110% 20%, rgba(0,170,255,0.04), transparent),
+                linear-gradient(180deg,var(--bg1),var(--bg2));
+    color:#0f3550;
+    overflow-x:hidden;
+  }
+
+  /* floating letters stage */
+  .letters-stage{
+    position:fixed; inset:0; z-index:1; pointer-events:none; overflow:visible;
+  }
+  .floating-letter{
+    position:absolute; font-weight:900; color:rgba(8,46,83,0.12); will-change:transform,opacity; user-select:none;
+    text-shadow: 0 1px 6px rgba(0,160,255,0.08);
+  }
+
+  /* main layout */
+  .wrap{ position:relative; z-index:5; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px; }
+  .card{
+    width:min(1050px,96vw);
+    background:var(--card);
+    border-radius:16px;
+    box-shadow: 0 14px 40px rgba(15,46,78,0.09);
+    padding:28px;
+    overflow:hidden;
+  }
+
+  /* landing */
+  .title{ font-size: clamp(20px, 3.2vw, 36px); font-weight:900; margin: 0 0 8px; color:#06364f; }
+  .subtitle{ margin:0 0 18px; color:var(--muted); font-size: 15px; }
+
+  .start-btn{
+    display:inline-block; border:0; cursor:pointer; font-weight:800;
+    padding:14px 28px; border-radius:999px; color:#fff; background:linear-gradient(90deg,var(--accent), #00aaff);
+    box-shadow: 0 10px 28px rgba(30,136,229,0.18); font-size:16px;
+  }
+  .start-btn:hover{ transform:translateY(-3px); }
+
+  /* quiz header */
+  .header-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+  .q-counter{ font-weight:700; color:#083a5e; }
+  .timer{ font-weight:700; color:var(--accent); background:linear-gradient(90deg, rgba(30,136,229,0.06), rgba(0,170,255,0.04)); padding:8px 12px; border-radius:12px; }
+
+  .progress{ height:10px; background:#e9f6ff; border-radius:999px; overflow:hidden; margin-top:12px; }
+  .progress-bar{ height:100%; width:0%; background:linear-gradient(90deg,var(--accent), #00b0ff); transition: width .35s ease; }
+
+  .q-text{ margin:18px 0; font-size: clamp(16px,2.4vw,22px); font-weight:800; color:#06364f; }
+
+  /* options grid */
+  .grid{
+    display:grid; gap:14px;
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (min-width:900px){ .grid{ grid-template-columns: repeat(4, 1fr); } }
+
+  .option{
+    position:relative; border-radius:14px; overflow:hidden; background:#fbfdff; cursor:pointer;
+    box-shadow: 0 8px 18px rgba(8,46,83,0.04); border:3px solid transparent; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    min-height:150px; display:flex; align-items:center; justify-content:center;
+  }
+  .option img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .option:hover{ transform:translateY(-4px); box-shadow:0 18px 30px rgba(8,46,83,0.08); }
+  .option.selected{ border-color:rgba(30,136,229,0.9); box-shadow: 0 20px 36px rgba(30,136,229,0.08); }
+
+  .actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:18px; }
+  .btn{ padding:10px 16px; border-radius:12px; border:0; cursor:pointer; font-weight:700; }
+  .btn.secondary{ background:#eef8ff; color:var(--accent); }
+  .btn.primary{ background:linear-gradient(90deg,var(--accent),#00aaff); color:white; box-shadow:0 10px 24px rgba(30,136,229,0.16); }
+
+  /* results */
+  .results-grid{ display:grid; gap:12px; grid-template-columns: 1fr; }
+  @media(min-width:900px){ .results-grid{ grid-template-columns: 2fr 1fr; } }
+  .result-card{ background:#f7fdff; border-radius:12px; padding:14px; box-shadow: 0 8px 20px rgba(8,46,83,0.03); }
+
+  .mistake-row{ display:flex; gap:10px; align-items:center; margin-bottom:8px; }
+  .thumb{ width:88px; height:88px; border-radius:8px; overflow:hidden; background:#fff; display:flex; align-items:center; justify-content:center; }
+  .thumb img{ width:100%; height:100%; object-fit:cover; }
+
+  .score-big{ font-size:28px; font-weight:900; color:#06364f; margin:6px 0; }
+  .emoji{ font-size:28px; margin-left:8px; }
+
+  @media(max-width:600px){
+    .option{ min-height:120px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- floating letters backdrop -->
+<div class="letters-stage" id="lettersStage" aria-hidden="true"></div>
+
+<div class="wrap">
+  <div class="card" role="main" id="mainCard">
+
+    <!-- Landing -->
+    <section id="landingView" aria-live="polite">
+      <h1 class="title">Dyslexia Screening Quiz</h1>
+      <p class="subtitle">A short visual quiz that uses look-alike images, colors, letters and spellings to gently assess recognition and visual confusion. Click Start to pick 10 random questions.</p>
+      <button id="startBtn" class="start-btn" aria-label="Start quiz">Let's Start</button>
+    </section>
+
+    <!-- Quiz -->
+    <section id="quizView" style="display:none;">
+      <div class="header-row">
+        <div class="q-counter" id="qCounter">Question 1 / 10</div>
+        <div class="timer" id="timer">Time: 0s</div>
+      </div>
+      <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="q-text" id="qText">Loading…</div>
+      <div class="grid" id="optionsGrid" aria-live="polite"></div>
+
+      <div class="actions">
+        <button class="btn secondary" id="skipBtn">Skip</button>
+        <button class="btn primary" id="nextBtn" disabled>Next</button>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section id="resultsView" style="display:none;">
+      <div class="results-grid">
+        <div class="result-card" aria-live="polite">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div>
+              <div style="font-weight:800; color:#083a5e;">Your Results</div>
+              <div class="score-big" id="scoreText">0 / 10</div>
+            </div>
+            <div id="performanceEmoji" style="text-align:right;"></div>
+          </div>
+
+          <div style="margin-top:8px; color:var(--muted);" id="timeTaken">Time: 0s</div>
+          <div style="margin-top:12px; font-weight:700;">Feedback</div>
+          <p id="feedbackText" style="margin-top:8px; color:var(--muted);"></p>
+
+        </div>
+
+        <div class="result-card">
+          <div style="font-weight:800; margin-bottom:8px;">Mistakes Summary</div>
+          <div id="mistakesWrap"></div>
+          <div style="margin-top:12px; display:flex; gap:8px; justify-content:space-between;">
+            <button class="btn secondary" id="retryBtn">Try Again</button>
+            <button class="btn primary" id="downloadBtn">Download Summary</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- confetti library -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<script>
+/* -----------------------
+   Floating letters creation
+   ----------------------- */
+(function makeLetters(){
+  const stage = document.getElementById('lettersStage');
+  const chars = ['p','q','d','b','o','c','g','6','9','a','u','n','m','w','v','s','z','e'];
+  const COUNT = 90;
+  for(let i=0;i<COUNT;i++){
+    const el = document.createElement('div');
+    el.className = 'floating-letter';
+    el.textContent = chars[Math.floor(Math.random()*chars.length)];
+    const size = 18 + Math.random()*48;
+    el.style.fontSize = size + 'px';
+    el.style.left = (Math.random()*110 - 5) + 'vw';
+    el.style.top = (80 + Math.random()*30) + 'vh';
+    el.style.opacity = (0.06 + Math.random()*0.22);
+    el.style.transform = `translateY(0) rotate(${Math.random()*360}deg)`;
+    const dur = 12 + Math.random()*20;
+    el.style.animationDuration = dur + 's';
+    el.style.animationDelay = (-Math.random()*dur) + 's';
+    stage.appendChild(el);
+  }
+})();
+
+/* ======================
+   Helper: SVG text tile
+   ====================== */
+function textTileSVG(text, size=380, bg='#ffffff', fg='#07344d'){
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}' viewBox='0 0 ${size} ${size}'>
+    <rect width='100%' height='100%' rx='24' ry='24' fill='${bg}'/>
+    <text x='50%' y='52%' font-family='Inter, Arial, Helvetica, sans-serif' font-size='110' font-weight='800' fill='${fg}' text-anchor='middle' dominant-baseline='middle'>${text}</text>
+  </svg>`;
+  return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
+/* ======================
+   Helpers for stable images
+   ====================== */
+const W = "https://upload.wikimedia.org/wikipedia/commons";
+const SC = (hex,size=300)=>`https://singlecolorimage.com/get/${hex.replace('#','')}/${size}x${size}`;
+
+/* ======================
+   POOL (50+ questions)
+   Each item: { q, a, opts:[{src,key,alt}] }
+   ====================== */
+const POOL = [
+  { q:"Select the Apple", a:"apple", opts:[
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"},
+    {src:`${W}/8/89/Tomato_je.jpg`, key:"tomato", alt:"Tomato"},
+    {src:`${W}/b/bb/Cherry_Stella444.jpg`, key:"cherry", alt:"Cherry"},
+    {src:`${W}/0/02/Plums.jpg`, key:"plum", alt:"Plum"}
+  ]},
+  { q:"Select the Banana", a:"banana", opts:[
+    {src:`${W}/8/8a/Banana-Single.jpg`, key:"banana", alt:"Banana"},
+    {src:`${W}/4/40/Papaya.jpg`, key:"papaya", alt:"Papaya"},
+    {src:`${W}/9/96/Cucumber_2010.jpg`, key:"cucumber", alt:"Cucumber"},
+    {src:`${W}/6/6f/Pumpkin.jpg`, key:"pumpkin", alt:"Pumpkin"}
+  ]},
+  { q:"Select the Mango", a:"mango", opts:[
+    {src:`${W}/9/90/Hapus_Mango.jpg`, key:"mango", alt:"Mango"},
+    {src:`${W}/4/40/Papaya.jpg`, key:"papaya", alt:"Papaya"},
+    {src:`${W}/0/0f/Pineapple_and_cross_section.jpg`, key:"pineapple", alt:"Pineapple"},
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"}
+  ]},
+  { q:"Select the Orange (fruit)", a:"orange", opts:[
+    {src:`${W}/c/c4/Orange-Fruit-Pieces.jpg`, key:"orange", alt:"Orange"},
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"},
+    {src:`${W}/9/90/Hapus_Mango.jpg`, key:"mango", alt:"Mango"},
+    {src:`${W}/4/40/Papaya.jpg`, key:"papaya", alt:"Papaya"}
+  ]},
+  { q:"Select the Pineapple", a:"pineapple", opts:[
+    {src:`${W}/0/0f/Pineapple_and_cross_section.jpg`, key:"pineapple", alt:"Pineapple"},
+    {src:`${W}/9/90/Hapus_Mango.jpg`, key:"mango", alt:"Mango"},
+    {src:`${W}/4/40/Papaya.jpg`, key:"papaya", alt:"Papaya"},
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"}
+  ]},
+  { q:"Select the Strawberry", a:"strawberry", opts:[
+    {src:`${W}/2/29/PerfectStrawberry.jpg`, key:"strawberry", alt:"Strawberry"},
+    {src:`${W}/b/bb/Cherry_Stella444.jpg`, key:"cherry", alt:"Cherry"},
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"},
+    {src:`${W}/0/02/Plums.jpg`, key:"plum", alt:"Plum"}
+  ]},
+  { q:"Select the Cherry", a:"cherry", opts:[
+    {src:`${W}/b/bb/Cherry_Stella444.jpg`, key:"cherry", alt:"Cherry"},
+    {src:`${W}/2/29/PerfectStrawberry.jpg`, key:"strawberry", alt:"Strawberry"},
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"},
+    {src:`${W}/0/02/Plums.jpg`, key:"plum", alt:"Plum"}
+  ]},
+  { q:"Select the Watermelon", a:"watermelon", opts:[
+    {src:`${W}/1/10/Watermelon_cross_BNC.jpg`, key:"watermelon", alt:"Watermelon"},
+    {src:`${W}/0/0f/Pineapple_and_cross_section.jpg`, key:"pineapple", alt:"Pineapple"},
+    {src:`${W}/4/40/Papaya.jpg`, key:"papaya", alt:"Papaya"},
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"}
+  ]},
+  { q:"Select the Pomegranate", a:"pomegranate", opts:[
+    {src:`${W}/8/87/Pomegranate02_edit02.jpg`, key:"pomegranate", alt:"Pomegranate"},
+    {src:`${W}/9/90/Hapus_Mango.jpg`, key:"mango", alt:"Mango"},
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"},
+    {src:`${W}/c/c4/Orange-Fruit-Pieces.jpg`, key:"orange", alt:"Orange"}
+  ]},
+  { q:"Select the Lemon", a:"lemon", opts:[
+    {src:`${W}/f/f6/Lemon.jpg`, key:"lemon", alt:"Lemon"},
+    {src:`${W}/5/5b/Lime-Whole-%26-Split.jpg`, key:"lime", alt:"Lime"},
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"},
+    {src:`${W}/c/c4/Orange-Fruit-Pieces.jpg`, key:"orange", alt:"Orange"}
+  ]},
+
+  /* Vegetables cluster */
+  { q:"Select the Tomato", a:"tomato", opts:[
+    {src:`${W}/8/89/Tomato_je.jpg`, key:"tomato", alt:"Tomato"},
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"},
+    {src:`${W}/b/bb/Cherry_Stella444.jpg`, key:"cherry", alt:"Cherry"},
+    {src:`${W}/9/90/Hapus_Mango.jpg`, key:"mango", alt:"Mango"}
+  ]},
+  { q:"Select the Cucumber", a:"cucumber", opts:[
+    {src:`${W}/9/96/Cucumber_2010.jpg`, key:"cucumber", alt:"Cucumber"},
+    {src:`${W}/6/6f/Pumpkin.jpg`, key:"pumpkin", alt:"Pumpkin"},
+    {src:`${W}/3/36/Green_capsicum.jpg`, key:"capsicum", alt:"Capsicum"},
+    {src:`${W}/4/40/Papaya.jpg`, key:"papaya", alt:"Papaya"}
+  ]},
+  { q:"Select the Pumpkin", a:"pumpkin", opts:[
+    {src:`${W}/6/6f/Pumpkin.jpg`, key:"pumpkin", alt:"Pumpkin"},
+    {src:`${W}/9/96/Cucumber_2010.jpg`, key:"cucumber", alt:"Cucumber"},
+    {src:`${W}/3/36/Green_capsicum.jpg`, key:"capsicum", alt:"Capsicum"},
+    {src:`${W}/8/89/Tomato_je.jpg`, key:"tomato", alt:"Tomato"}
+  ]},
+  { q:"Select the Carrot", a:"carrot", opts:[
+    {src:`${W}/6/69/CarrotDaucusCarota.jpg`, key:"carrot", alt:"Carrot"},
+    {src:`${W}/6/6f/Pumpkin.jpg`, key:"pumpkin", alt:"Pumpkin"},
+    {src:`${W}/9/96/Cucumber_2010.jpg`, key:"cucumber", alt:"Cucumber"},
+    {src:`${W}/8/89/Tomato_je.jpg`, key:"tomato", alt:"Tomato"}
+  ]},
+  { q:"Select the Broccoli", a:"broccoli", opts:[
+    {src:`${W}/0/03/Broccoli_and_cross_section_edit.jpg`, key:"broccoli", alt:"Broccoli"},
+    {src:`${W}/3/36/Green_capsicum.jpg`, key:"capsicum", alt:"Capsicum"},
+    {src:`${W}/9/96/Cucumber_2010.jpg`, key:"cucumber", alt:"Cucumber"},
+    {src:`${W}/6/6f/Pumpkin.jpg`, key:"pumpkin", alt:"Pumpkin"}
+  ]},
+  { q:"Select the Cauliflower", a:"cauliflower", opts:[
+    {src:`${W}/4/4c/Cauliflower_jr_0214.jpg`, key:"cauliflower", alt:"Cauliflower"},
+    {src:`${W}/0/03/Broccoli_and_cross_section_edit.jpg`, key:"broccoli", alt:"Broccoli"},
+    {src:`${W}/9/96/Cucumber_2010.jpg`, key:"cucumber", alt:"Cucumber"},
+    {src:`${W}/6/6f/Pumpkin.jpg`, key:"pumpkin", alt:"Pumpkin"}
+  ]},
+
+  /* Shapes */
+  { q:"Select the Circle", a:"circle", opts:[
+    {src:`${W}/thumb/e/e6/Circle_-_black_simple.svg/512px-Circle_-_black_simple.svg.png`, key:"circle", alt:"Circle"},
+    {src:`${W}/3/3b/Sphere_wireframe_10deg_6r.svg`, key:"sphere", alt:"Sphere"},
+    {src:`${W}/9/98/Ellipse-black.svg`, key:"oval", alt:"Oval"},
+    {src:`${W}/3/32/Blue_square.svg`, key:"square", alt:"Square"}
+  ]},
+  { q:"Select the Square", a:"square", opts:[
+    {src:`${W}/3/32/Blue_square.svg`, key:"square", alt:"Square"},
+    {src:`${W}/e/e6/Circle_-_black_simple.svg`, key:"circle", alt:"Circle"},
+    {src:`${W}/9/98/Ellipse-black.svg`, key:"oval", alt:"Oval"},
+    {src:`${W}/4/4f/Basic_triangle.svg`, key:"triangle", alt:"Triangle"}
+  ]},
+  { q:"Select the Triangle", a:"triangle", opts:[
+    {src:`${W}/4/4f/Basic_triangle.svg`, key:"triangle", alt:"Triangle"},
+    {src:`${W}/3/32/Blue_square.svg`, key:"square", alt:"Square"},
+    {src:`${W}/e/e6/Circle_-_black_simple.svg`, key:"circle", alt:"Circle"},
+    {src:`${W}/9/98/Ellipse-black.svg`, key:"oval", alt:"Oval"}
+  ]},
+
+  /* Colors (singlecolorimage stable) */
+  { q:"Select the Blue color", a:"blue", opts:[
+    {src:SC('#0000FF',300), key:"blue", alt:"Blue"},
+    {src:SC('#7E3FF2',300), key:"purple", alt:"Purple"},
+    {src:SC('#87CEEB',300), key:"skyblue", alt:"Skyblue"},
+    {src:SC('#FF3B30',300), key:"red", alt:"Red"}
+  ]},
+  { q:"Select the Purple color", a:"purple", opts:[
+    {src:SC('#7E3FF2',300), key:"purple", alt:"Purple"},
+    {src:SC('#0000FF',300), key:"blue", alt:"Blue"},
+    {src:SC('#87CEEB',300), key:"skyblue", alt:"Skyblue"},
+    {src:SC('#00C853',300), key:"green", alt:"Green"}
+  ]},
+  { q:"Select the Sky Blue color", a:"skyblue", opts:[
+    {src:SC('#87CEEB',300), key:"skyblue", alt:"Skyblue"},
+    {src:SC('#7E3FF2',300), key:"purple", alt:"Purple"},
+    {src:SC('#0000FF',300), key:"blue", alt:"Blue"},
+    {src:SC('#FFD60A',300), key:"yellow", alt:"Yellow"}
+  ]},
+
+  /* Animals */
+  { q:"Select the Cat", a:"cat", opts:[
+    {src:`${W}/3/3a/Cat03.jpg`, key:"cat", alt:"Cat"},
+    {src:`${W}/3/30/Dog_m.jpg`, key:"dog", alt:"Dog"},
+    {src:`${W}/0/0b/Rabbit_in_montana.jpg`, key:"rabbit", alt:"Rabbit"},
+    {src:`${W}/1/1a/Horse_in_field.jpg`, key:"horse", alt:"Horse"}
+  ]},
+  { q:"Select the Dog", a:"dog", opts:[
+    {src:`${W}/3/30/Dog_m.jpg`, key:"dog", alt:"Dog"},
+    {src:`${W}/3/3a/Cat03.jpg`, key:"cat", alt:"Cat"},
+    {src:`${W}/0/0b/Rabbit_in_montana.jpg`, key:"rabbit", alt:"Rabbit"},
+    {src:`${W}/1/1a/Horse_in_field.jpg`, key:"horse", alt:"Horse"}
+  ]},
+
+  /* Numbers & Letters (SVG tiles) */
+  { q:"Select number 6", a:"6", opts:[
+    {src:textTileSVG('6'), key:"6", alt:"6"},
+    {src:textTileSVG('9'), key:"9", alt:"9"},
+    {src:textTileSVG('g'), key:"g", alt:"g"},
+    {src:textTileSVG('q'), key:"q", alt:"q"}
+  ]},
+  { q:"Select number 9", a:"9", opts:[
+    {src:textTileSVG('9'), key:"9", alt:"9"},
+    {src:textTileSVG('6'), key:"6", alt:"6"},
+    {src:textTileSVG('p'), key:"p", alt:"p"},
+    {src:textTileSVG('b'), key:"b", alt:"b"}
+  ]},
+  { q:"Select the letter p", a:"p", opts:[
+    {src:textTileSVG('p'), key:"p", alt:"p"},
+    {src:textTileSVG('q'), key:"q", alt:"q"},
+    {src:textTileSVG('b'), key:"b", alt:"b"},
+    {src:textTileSVG('d'), key:"d", alt:"d"}
+  ]},
+  { q:"Select the letter b", a:"b", opts:[
+    {src:textTileSVG('b'), key:"b", alt:"b"},
+    {src:textTileSVG('d'), key:"d", alt:"d"},
+    {src:textTileSVG('p'), key:"p", alt:"p"},
+    {src:textTileSVG('q'), key:"q", alt:"q"}
+  ]},
+
+  /* Spellings (generated tiles) */
+  { q:"Select correct spelling: Banana", a:"banana", opts:[
+    {src:textTileSVG('Banana'), key:"banana", alt:"Banana"},
+    {src:textTileSVG('Bnana'), key:"bnana", alt:"Bnana"},
+    {src:textTileSVG('Bananna'), key:"bananna", alt:"Bananna"},
+    {src:textTileSVG('Bnanna'), key:"bnanna", alt:"Bnanna"}
+  ]},
+  { q:"Select correct spelling: Orange", a:"orange", opts:[
+    {src:textTileSVG('Orange'), key:"orange", alt:"Orange"},
+    {src:textTileSVG('Ornage'), key:"ornage", alt:"Ornage"},
+    {src:textTileSVG('Orang'), key:"orang", alt:"Orang"},
+    {src:textTileSVG('Orrange'), key:"orrange", alt:"Orrange"}
+  ]},
+  { q:"Select correct spelling: Apple", a:"apple", opts:[
+    {src:textTileSVG('Apple'), key:"apple", alt:"Apple"},
+    {src:textTileSVG('Aple'), key:"aple", alt:"Aple"},
+    {src:textTileSVG('Appel'), key:"appel", alt:"Appel"},
+    {src:textTileSVG('Appl e'), key:"appl e", alt:"Appl e"}
+  ]},
+
+  /* more fruits/veggies/objects to ensure >50 total */
+  { q:"Select the Pear", a:"pear", opts:[
+    {src:`${W}/3/33/Pear_DS.jpg`, key:"pear", alt:"Pear"},
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"},
+    {src:`${W}/0/02/Plums.jpg`, key:"plum", alt:"Plum"},
+    {src:`${W}/2/29/PerfectStrawberry.jpg`, key:"strawberry", alt:"Strawberry"}
+  ]},
+  { q:"Select the Peach", a:"peach", opts:[
+    {src:`${W}/9/9e/Autumn_Red_peaches.jpg`, key:"peach", alt:"Peach"},
+    {src:`${W}/0/02/Plums.jpg`, key:"plum", alt:"Plum"},
+    {src:`${W}/2/29/PerfectStrawberry.jpg`, key:"strawberry", alt:"Strawberry"},
+    {src:`${W}/b/bb/Cherry_Stella444.jpg`, key:"cherry", alt:"Cherry"}
+  ]},
+  { q:"Select the Kiwi", a:"kiwi", opts:[
+    {src:`${W}/d/d3/Kiwi_aka.jpg`, key:"kiwi", alt:"Kiwi"},
+    {src:`${W}/3/33/Pear_DS.jpg`, key:"pear", alt:"Pear"},
+    {src:`${W}/4/40/Papaya.jpg`, key:"papaya", alt:"Papaya"},
+    {src:`${W}/9/90/Hapus_Mango.jpg`, key:"mango", alt:"Mango"}
+  ]},
+  { q:"Select the Coconut", a:"coconut", opts:[
+    {src:`${W}/2/2c/Coconut.jpg`, key:"coconut", alt:"Coconut"},
+    {src:`${W}/0/0f/Pineapple_and_cross_section.jpg`, key:"pineapple", alt:"Pineapple"},
+    {src:`${W}/4/40/Papaya.jpg`, key:"papaya", alt:"Papaya"},
+    {src:`${W}/8/8a/Banana-Single.jpg`, key:"banana", alt:"Banana"}
+  ]},
+  { q:"Select the Avocado", a:"avocado", opts:[
+    {src:`${W}/3/3a/Avocado.jpg`, key:"avocado", alt:"Avocado"},
+    {src:`${W}/3/33/Pear_DS.jpg`, key:"pear", alt:"Pear"},
+    {src:`${W}/f/f6/Lemon.jpg`, key:"lemon", alt:"Lemon"},
+    {src:`${W}/5/5b/Lime-Whole-%26-Split.jpg`, key:"lime", alt:"Lime"}
+  ]},
+  { q:"Select the Grapes", a:"grape", opts:[
+    {src:`${W}/1/1e/Table_grapes_on_white.jpg`, key:"grape", alt:"Grapes"},
+    {src:`${W}/b/bb/Cherry_Stella444.jpg`, key:"cherry", alt:"Cherry"},
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"},
+    {src:`${W}/0/02/Plums.jpg`, key:"plum", alt:"Plum"}
+  ]},
+  { q:"Select the Blueberry", a:"blueberry", opts:[
+    {src:`${W}/1/12/Blueberries_.jpg`, key:"blueberry", alt:"Blueberries"},
+    {src:`${W}/2/29/PerfectStrawberry.jpg`, key:"strawberry", alt:"Strawberry"},
+    {src:`${W}/b/bb/Cherry_Stella444.jpg`, key:"cherry", alt:"Cherry"},
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"}
+  ]},
+  { q:"Select the Fig", a:"fig", opts:[
+    {src:`${W}/1/14/Figs_2.jpg`, key:"fig", alt:"Figs"},
+    {src:`${W}/2/29/PerfectStrawberry.jpg`, key:"strawberry", alt:"Strawberry"},
+    {src:`${W}/b/bb/Cherry_Stella444.jpg`, key:"cherry", alt:"Cherry"},
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"}
+  ]},
+  { q:"Select the Dragonfruit", a:"dragonfruit", opts:[
+    {src:`${W}/e/e9/Pitaya_cross_section_ed2.jpg`, key:"dragonfruit", alt:"Dragon fruit"},
+    {src:`${W}/1/12/Blueberries_.jpg`, key:"blueberry", alt:"Blueberries"},
+    {src:`${W}/2/29/PerfectStrawberry.jpg`, key:"strawberry", alt:"Strawberry"},
+    {src:`${W}/b/bb/Cherry_Stella444.jpg`, key:"cherry", alt:"Cherry"}
+  ]},
+  { q:"Select the Onion", a:"onion", opts:[
+    {src:`${W}/7/7b/Onion_on_White.JPG`, key:"onion", alt:"Onion"},
+    {src:`${W}/6/6f/Pumpkin.jpg`, key:"pumpkin", alt:"Pumpkin"},
+    {src:`${W}/9/96/Cucumber_2010.jpg`, key:"cucumber", alt:"Cucumber"},
+    {src:`${W}/8/89/Tomato_je.jpg`, key:"tomato", alt:"Tomato"}
+  ]},
+  { q:"Select the Potato", a:"potato", opts:[
+    {src:`${W}/a/ab/Patates.jpg`, key:"potato", alt:"Potato"},
+    {src:`${W}/7/7b/Onion_on_White.JPG`, key:"onion", alt:"Onion"},
+    {src:`${W}/6/6f/Pumpkin.jpg`, key:"pumpkin", alt:"Pumpkin"},
+    {src:`${W}/9/96/Cucumber_2010.jpg`, key:"cucumber", alt:"Cucumber"}
+  ]},
+  { q:"Select the Corn", a:"corn", opts:[
+    {src:`${W}/6/64/Corncobs.jpg`, key:"corn", alt:"Corn"},
+    {src:`${W}/a/ab/Patates.jpg`, key:"potato", alt:"Potato"},
+    {src:`${W}/7/7b/Onion_on_White.JPG`, key:"onion", alt:"Onion"},
+    {src:`${W}/6/6f/Pumpkin.jpg`, key:"pumpkin", alt:"Pumpkin"}
+  ]},
+  { q:"Select the Eggplant", a:"eggplant", opts:[
+    {src:`${W}/7/73/Solanum_melongena_Aubergine.jpg`, key:"eggplant", alt:"Eggplant"},
+    {src:`${W}/3/36/Green_capsicum.jpg`, key:"capsicum", alt:"Capsicum"},
+    {src:`${W}/9/96/Cucumber_2010.jpg`, key:"cucumber", alt:"Cucumber"},
+    {src:`${W}/8/89/Tomato_je.jpg`, key:"tomato", alt:"Tomato"}
+  ]},
+  { q:"Select the Capsicum", a:"capsicum", opts:[
+    {src:`${W}/3/36/Green_capsicum.jpg`, key:"capsicum", alt:"Capsicum"},
+    {src:`${W}/7/73/Solanum_melongena_Aubergine.jpg`, key:"eggplant", alt:"Eggplant"},
+    {src:`${W}/9/96/Cucumber_2010.jpg`, key:"cucumber", alt:"Cucumber"},
+    {src:`${W}/6/6f/Pumpkin.jpg`, key:"pumpkin", alt:"Pumpkin"}
+  ]},
+
+  /* objects */
+  { q:"Select the Tree", a:"tree", opts:[
+    {src:`${W}/4/4d/Tree_in_a_field.jpg`, key:"tree", alt:"Tree"},
+    {src:`${W}/e/e3/Sky_over_Riga.jpg`, key:"sky", alt:"Sky"},
+    {src:`${W}/d/d5/House_silhouette.svg`, key:"house", alt:"House"},
+    {src:`${W}/c/c6/Car_icon_black.svg`, key:"car", alt:"Car"}
+  ]},
+  { q:"Select the Sky", a:"sky", opts:[
+    {src:`${W}/e/e3/Sky_over_Riga.jpg`, key:"sky", alt:"Sky"},
+    {src:SC('#87CEEB',300), key:"skyblue", alt:"Sky blue"},
+    {src:`${W}/4/4d/Tree_in_a_field.jpg`, key:"tree", alt:"Tree"},
+    {src:`${W}/3/32/Blue_square.svg`, key:"square", alt:"Square"}
+  ]},
+
+  /* a few more spelling/number tiles to round up >50 */
+  { q:"Select correct spelling: Grapes", a:"grapes", opts:[
+    {src:textTileSVG('Grapes'), key:"grapes", alt:"Grapes"},
+    {src:textTileSVG('Graeps'), key:"graeps", alt:"Graeps"},
+    {src:textTileSVG('Graps'), key:"graps", alt:"Graps"},
+    {src:textTileSVG('Grappes'), key:"grappes", alt:"Grappes"}
+  ]},
+  { q:"Select correct spelling: Pumpkin", a:"pumpkin", opts:[
+    {src:textTileSVG('Pumpkin'), key:"pumpkin", alt:"Pumpkin"},
+    {src:textTileSVG('Pumkin'), key:"pumkin", alt:"Pumkin"},
+    {src:textTileSVG('Pumpkim'), key:"pumpkim", alt:"Pumpkim"},
+    {src:textTileSVG('Pum pkin'), key:"pum pkin", alt:"Pum pkin"}
+  ]},
+  { q:"Select number 3", a:"3", opts:[
+    {src:textTileSVG('3'), key:"3", alt:"3"},
+    {src:textTileSVG('8'), key:"8", alt:"8"},
+    {src:textTileSVG('5'), key:"5", alt:"5"},
+    {src:textTileSVG('9'), key:"9", alt:"9"}
+  ]},
+  { q:"Select letter 'd'", a:"d", opts:[
+    {src:textTileSVG('d'), key:"d", alt:"d"},
+    {src:textTileSVG('b'), key:"b", alt:"b"},
+    {src:textTileSVG('p'), key:"p", alt:"p"},
+    {src:textTileSVG('q'), key:"q", alt:"q"}
+  ]},
+  { q:"Select the Grapefruit", a:"grapefruit", opts:[
+    {src:`${W}/7/7b/Grapefruit.jpg`, key:"grapefruit", alt:"Grapefruit"},
+    {src:`${W}/f/f6/Lemon.jpg`, key:"lemon", alt:"Lemon"},
+    {src:`${W}/5/5b/Lime-Whole-%26-Split.jpg`, key:"lime", alt:"Lime"},
+    {src:`${W}/c/c4/Orange-Fruit-Pieces.jpg`, key:"orange", alt:"Orange"}
+  ]},
+  { q:"Select the Guava", a:"guava", opts:[
+    {src:`${W}/1/17/Guava_ID.jpg`, key:"guava", alt:"Guava"},
+    {src:`${W}/3/33/Pear_DS.jpg`, key:"pear", alt:"Pear"},
+    {src:`${W}/2/29/PerfectStrawberry.jpg`, key:"strawberry", alt:"Strawberry"},
+    {src:`${W}/c/c4/Orange-Fruit-Pieces.jpg`, key:"orange", alt:"Orange"}
+  ]},
+  { q:"Select the Mint leaves", a:"mint", opts:[
+    {src:`${W}/a/a0/Mint_leaves.jpg`, key:"mint", alt:"Mint"},
+    {src:`${W}/3/36/Green_capsicum.jpg`, key:"capsicum", alt:"Capsicum"},
+    {src:`${W}/9/96/Cucumber_2010.jpg`, key:"cucumber", alt:"Cucumber"},
+    {src:`${W}/6/69/CarrotDaucusCarota.jpg`, key:"carrot", alt:"Carrot"}
+  ]},
+  { q:"Select the Lime", a:"lime", opts:[
+    {src:`${W}/5/5b/Lime-Whole-%26-Split.jpg`, key:"lime", alt:"Lime"},
+    {src:`${W}/f/f6/Lemon.jpg`, key:"lemon", alt:"Lemon"},
+    {src:`${W}/c/c4/Orange-Fruit-Pieces.jpg`, key:"orange", alt:"Orange"},
+    {src:`${W}/9/90/Hapus_Mango.jpg`, key:"mango", alt:"Mango"}
+  ]},
+  { q:"Select the Pear (green)", a:"pear", opts:[
+    {src:`${W}/3/33/Pear_DS.jpg`, key:"pear", alt:"Pear"},
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"},
+    {src:`${W}/0/02/Plums.jpg`, key:"plum", alt:"Plum"},
+    {src:`${W}/2/29/PerfectStrawberry.jpg`, key:"strawberry", alt:"Strawberry"}
+  ]},
+  { q:"Select the Fig (whole)", a:"fig", opts:[
+    {src:`${W}/1/14/Figs_2.jpg`, key:"fig", alt:"Fig"},
+    {src:`${W}/1/12/Blueberries_.jpg`, key:"blueberry", alt:"Blueberry"},
+    {src:`${W}/b/bb/Cherry_Stella444.jpg`, key:"cherry", alt:"Cherry"},
+    {src:`${W}/1/15/Red_Apple.jpg`, key:"apple", alt:"Apple"}
+  ]},
+  { q:"Select the Blackberry", a:"blackberry", opts:[
+    {src:`${W}/4/43/Blackberry.jpg`, key:"blackberry", alt:"Blackberry"},
+    {src:`${W}/1/12/Blueberries_.jpg`, key:"blueberry", alt:"Blueberry"},
+    {src:`${W}/2/29/PerfectStrawberry.jpg`, key:"strawberry", alt:"Strawberry"},
+    {src:`${W}/b/bb/Cherry_Stella444.jpg`, key:"cherry", alt:"Cherry"}
+  ]}
+]; // end POOL
+
+/* ====================
+   Quiz state & UI
+   ==================== */
+let pool = []; // selected 10 unique
+let current = 0;
+let score = 0;
+let mistakes = []; // {q, chosenKey, chosenSrc, correctKey, correctSrc}
+let startTs = 0;
+let timerId = null;
+
+/* DOM nodes */
+const landingView = document.getElementById('landingView');
+const quizView = document.getElementById('quizView');
+const resultsView = document.getElementById('resultsView');
+const startBtn = document.getElementById('startBtn');
+const qCounter = document.getElementById('qCounter');
+const timerEl = document.getElementById('timer');
+const progressBar = document.getElementById('progressBar');
+const qText = document.getElementById('qText');
+const optionsGrid = document.getElementById('optionsGrid');
+const nextBtn = document.getElementById('nextBtn');
+const skipBtn = document.getElementById('skipBtn');
+
+const scoreText = document.getElementById('scoreText');
+const feedbackText = document.getElementById('feedbackText');
+const performanceEmoji = document.getElementById('performanceEmoji');
+const timeTakenEl = document.getElementById('timeTaken');
+const mistakesWrap = document.getElementById('mistakesWrap');
+const retryBtn = document.getElementById('retryBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+
+/* helpers */
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+function pickPool(){ return shuffle(POOL.slice()).slice(0,10); }
+
+/* start */
+startBtn.addEventListener('click', ()=>{
+  pool = pickPool();
+  current = 0; score = 0; mistakes = [];
+  landingView.style.display = 'none';
+  resultsView.style.display = 'none';
+  quizView.style.display = 'block';
+  progressBar.style.width = `0%`;
+  startTs = Date.now();
+  startTimer();
+  renderQuestion();
+});
+
+/* timer */
+function startTimer(){
+  timerEl.innerText = 'Time: 0s';
+  if(timerId) clearInterval(timerId);
+  timerId = setInterval(()=>{
+    const s = Math.floor((Date.now()-startTs)/1000);
+    timerEl.innerText = `Time: ${s}s`;
+  },1000);
+}
+function stopTimer(){ if(timerId) clearInterval(timerId); }
+
+/* render question */
+let selected = null;
+function renderQuestion(){
+  selected = null;
+  const q = pool[current];
+  qCounter.innerText = `Question ${current+1} / ${pool.length}`;
+  progressBar.style.width = `${(current)/pool.length*100}%`;
+  qText.innerText = q.q;
+  optionsGrid.innerHTML = '';
+  nextBtn.disabled = true;
+
+  const opts = shuffle(q.opts.map(o=>({...o})));
+  for(const opt of opts){
+    const div = document.createElement('div');
+    div.className = 'option';
+    div.setAttribute('role','button');
+    div.tabIndex = 0;
+    const img = document.createElement('img');
+    img.src = opt.src;
+    img.alt = opt.alt || '';
+    img.loading = 'eager';
+    div.appendChild(img);
+
+    div.addEventListener('click', ()=>{
+      document.querySelectorAll('.option').forEach(o=>o.classList.remove('selected'));
+      div.classList.add('selected');
+      selected = { key: opt.key, src: opt.src };
+      nextBtn.disabled = false;
+    });
+    div.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); div.click(); } });
+
+    optionsGrid.appendChild(div);
+  }
+
+  try{
+    const names = q.opts.map(o=>o.alt || o.key).join(', ');
+    const ut = new SpeechSynthesisUtterance(`${q.q}. Options: ${names}`);
+    ut.rate = 0.98; ut.pitch = 1.0;
+    speechSynthesis.cancel(); speechSynthesis.speak(ut);
+  }catch(e){}
+}
+
+/* Skip & Next */
+skipBtn.addEventListener('click', ()=>{
+  commitAnswer(null);
+  goNext();
+});
+nextBtn.addEventListener('click', ()=>{
+  commitAnswer(selected ? selected.key : null);
+  goNext();
+});
+
+/* commit answer */
+function commitAnswer(chosenKey){
+  const q = pool[current];
+  const correctKey = q.a;
+  const correctOpt = q.opts.find(o=>o.key===correctKey) || q.opts[0];
+  if(!chosenKey){
+    mistakes.push({ q: q.q, chosenKey: '(skipped)', chosenSrc: null, correctKey: correctKey, correctSrc: correctOpt.src });
+  } else if(chosenKey === correctKey){
+    score++;
+  } else {
+    const chosenOpt = q.opts.find(o=>o.key===chosenKey);
+    mistakes.push({ q: q.q, chosenKey, chosenSrc: chosenOpt ? chosenOpt.src : null, correctKey, correctSrc: correctOpt.src });
+  }
+}
+
+/* go next / finish */
+function goNext(){
+  current++;
+  if(current < pool.length) renderQuestion();
+  else finishQuiz();
+}
+
+/* finish */
+function finishQuiz(){
+  stopTimer();
+  quizView.style.display = 'none';
+  resultsView.style.display = 'block';
+
+  const totalTime = Math.floor((Date.now()-startTs)/1000);
+  const pct = Math.round(score / pool.length * 100);
+
+  scoreText.innerText = `${score} / ${pool.length} (${pct}%)`;
+  timeTakenEl.innerText = `Time: ${totalTime}s`;
+
+  let feedback = '';
+  if(pct >= 85){
+    feedback = "🌟 Amazing! Clear visual recognition — excellent result.";
+    performanceEmoji.innerHTML = '<div class="emoji">🎉</div>';
+  } else if (pct >= 70){
+    feedback = "🎉 Great job! Some confusions but very good.";
+    performanceEmoji.innerHTML = '<div class="emoji">👏</div>';
+  } else if (pct >= 45){
+    feedback = "🙂 A good try — a few confusions show areas to practice.";
+    performanceEmoji.innerHTML = '<div class="emoji">🙂</div>';
+  } else {
+    feedback = "💪 Keep practicing — early detection helps support learning.";
+    performanceEmoji.innerHTML = '<div class="emoji">💡</div>';
+  }
+  feedbackText.innerText = feedback;
+
+  mistakesWrap.innerHTML = '';
+  if(mistakes.length === 0){
+    mistakesWrap.innerHTML = `<div style="color:green; font-weight:700;">No mistakes — perfect!</div>`;
+  } else {
+    for(const m of mistakes){
+      const row = document.createElement('div');
+      row.className = 'mistake-row';
+      row.innerHTML = `
+        <div style="flex:1;">
+          <div style="font-weight:700; color:#06364f; margin-bottom:6px;">${m.q}</div>
+          <div style="color:var(--muted); font-size:13px;">You: ${m.chosenKey} — Correct: ${m.correctKey}</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <div class="thumb">${m.chosenSrc ? `<img src="${m.chosenSrc}" alt="chosen">` : `<div style="font-size:12px;color:var(--muted);padding:6px">Skipped</div>`}</div>
+          <div class="thumb"><img src="${m.correctSrc}" alt="correct"></div>
+        </div>
+      `;
+      mistakesWrap.appendChild(row);
+    }
+  }
+
+  setTimeout(()=>runConfetti(pct), 350);
+}
+
+/* confetti */
+function runConfetti(pct){
+  const duration = 2000;
+  const end = Date.now() + duration;
+  const colorSet = pct >= 85 ? ['#00b894','#00cec9','#74b9ff'] :
+                   pct >= 70 ? ['#00b894','#ffd32a','#74b9ff'] :
+                   ['#ff7675','#ffd32a','#74b9ff'];
+  (function frame(){
+    confetti({ particleCount: 8, angle: 60, spread: 55, origin: { x: 0 }, colors: colorSet });
+    confetti({ particleCount: 8, angle: 120, spread: 55, origin: { x: 1 }, colors: colorSet });
+    if (Date.now() < end) requestAnimationFrame(frame);
+  })();
+}
+
+/* retry & download */
+retryBtn.addEventListener('click', ()=>{
+  resultsView.style.display = 'none';
+  landingView.style.display = 'block';
+  speechSynthesis.cancel();
+});
+downloadBtn.addEventListener('click', ()=>{
+  const data = { when: new Date().toLocaleString(), score, total:pool.length, timeSec:Math.floor((Date.now()-startTs)/1000), mistakes };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `quiz-summary-${Date.now()}.json`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+});
+
+/* keyboard start */
+startBtn.addEventListener('keydown', e => { if(e.key==='Enter') startBtn.click(); });
+
+/* initial */
+window.addEventListener('load', ()=>{ landingView.style.display = 'block'; });
+</script>
+</body>
+</html>
